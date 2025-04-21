@@ -41,6 +41,12 @@
                   <img class="upload-file" src="{{ url_for('static', filename='img/upload-file.svg') }}" alt="Upload file" />
                 </div>
               </div>
+              <div id="response-container" class="response-container"></div>
+              <div id="loading-indicator" class="loading-indicator">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+              </div>
             </div>
           </div>
           <div class="login-button">
@@ -62,7 +68,9 @@
 
     <script>
       $(document).ready(function() {
-        // Clear placeholder text when clicked
+        $('#loading-indicator').hide();
+        $('#response-container').hide();
+
         $('#chat-input').focus(function() {
           if ($(this).text() === 'WHAT DO YOU WANT TO KNOW?') {
             $(this).text('');
@@ -70,7 +78,6 @@
           }
         });
 
-        // Restore placeholder text if empty on blur
         $('#chat-input').blur(function() {
           if ($(this).text().trim() === '') {
             $(this).text('WHAT DO YOU WANT TO KNOW?');
@@ -78,12 +85,10 @@
           }
         });
 
-        // Handle send button click
         $('#send-button').click(function() {
           sendMessage();
         });
 
-        // Handle Enter key press in chat input
         $('#chat-input').keypress(function(e) {
           if (e.which === 13) {
             e.preventDefault();
@@ -91,9 +96,7 @@
           }
         });
 
-        // Toggle graph mode
         $('#graph-toggle').click(function() {
-          // Slide transition to graph page
           $('body').addClass('slide-out-left');
           setTimeout(function() {
             window.location.href = "{{ url_for('graph') }}";
@@ -103,21 +106,36 @@
         function sendMessage() {
           const message = $('#chat-input').text().trim();
           if (message !== '' && message !== 'WHAT DO YOU WANT TO KNOW?') {
-            // Send chat message to server
+            $('#loading-indicator').show();
+            $('#response-container').hide();
+            
+            $('#send-button').css('opacity', '0.5').prop('disabled', true);
+            
             $.ajax({
               url: '/api/chat',
               type: 'POST',
               contentType: 'application/json',
               data: JSON.stringify({ message: message }),
               success: function(response) {
-                alert('Response: ' + response.response);
-                // Clear input after sending
+                $('#loading-indicator').hide();
+                
+                $('#response-container').html(response.response.replace(/\n/g, '<br>')).show();
+                
                 $('#chat-input').text('WHAT DO YOU WANT TO KNOW?');
                 $('#chat-input').css('color', '#262626');
+                
+                $('#send-button').css('opacity', '1').prop('disabled', false);
               },
               error: function(err) {
+                $('#loading-indicator').hide();
+                
+                $('#response-container').html(
+                  `<div class="error">Error: ${err.responseJSON?.error || 'Failed to send message. Please try again.'}</div>`
+                ).show();
+                
                 console.error('Error sending message:', err);
-                alert('Error: ' + err.responseJSON?.error || 'Failed to send message');
+                
+                $('#send-button').css('opacity', '1').prop('disabled', false);
               }
             });
           }
@@ -126,12 +144,71 @@
     </script>
 
     <style>
-      /* Add slide transition effect */
       body {
         transition: transform 0.3s ease-out;
       }
       body.slide-out-left {
         transform: translateX(-100%);
+      }
+      
+      .response-container {
+        position: absolute;
+        width: 90%;
+        max-height: 100px;
+        overflow-y: auto;
+        top: 20px;
+        left: 40px;
+        font-family: "Inter", "Consolas-Regular", Helvetica, sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+        color: #333;
+        background-color: rgba(255, 255, 255, 0.7);
+        border-radius: 10px;
+        padding: 10px;
+        display: none;
+      }
+      
+      .error {
+        color: #e74c3c;
+        font-weight: 500;
+      }
+      
+      .loading-indicator {
+        position: absolute;
+        left: 50%;
+        top: 30px;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 8px;
+      }
+      
+      .dot {
+        width: 12px;
+        height: 12px;
+        background-color: #7C9FDF;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite ease-in-out;
+      }
+      
+      .dot:nth-child(2) {
+        animation-delay: 0.3s;
+        background-color: #B290D6;
+      }
+      
+      .dot:nth-child(3) {
+        animation-delay: 0.6s;
+        background-color: #7ED1B8;
+      }
+      
+      @keyframes pulse {
+        0%, 100% {
+          transform: scale(0.8);
+          opacity: 0.5;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 1;
+        }
       }
     </style>
   </body>

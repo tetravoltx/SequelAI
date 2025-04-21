@@ -1,48 +1,128 @@
 import requests
 import json
 import os
-from flask import current_app
+import time
+from flask import current_app, request
 from models.db_model import db, Chat, Node, Edge
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
-# You'll need to provide your OpenRouter API key
-# OPENROUTER_API_KEY = "your_api_key_here"
+# Get the OpenRouter API key and model from environment variables
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+MODEL = os.environ.get("MODEL", "openai/gpt-3.5-turbo")  # Changed default model to gpt-3.5-turbo
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-def process_chat(message):
-    """Process a chat message using OpenRouter API with Gemini model"""
+def process_chat(message, max_retries=3):
+    """Process a chat message using OpenRouter API"""
     
     # Check if API key is set
     if not OPENROUTER_API_KEY:
         # For development/testing, return a mock response
+        print("Warning: OPENROUTER_API_KEY is not set. Using mock response.")
         response = f"Mock response to: {message} (Please set OPENROUTER_API_KEY environment variable)"
     else:
-        # Make request to OpenRouter API
+        # Make request to OpenRouter API with proper headers
         headers = {
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "HTTP-Referer": "http://localhost:5000",
+            "X-Title": "Sequel AI"
         }
         
+        # Simplified request format following OpenRouter documentation
         data = {
-            "model": "google/gemini-2.5-pro-exp-03-25:free",
+            "model": MODEL,
             "messages": [
-                {"role": "user", "content": message}
-            ]
+                {
+                    "role": "user",
+                    "content": message
+                }
+            ],
+            "temperature": 0.7,
+            "max_tokens": 500  # Reduced token limit to ensure we're within free tier limits
         }
         
-        try:
-            resp = requests.post(OPENROUTER_URL, headers=headers, json=data)
-            resp.raise_for_status()  # Raise exception for HTTP errors
-            
-            # Parse response
-            response_data = resp.json()
-            response = response_data["choices"][0]["message"]["content"]
-        except Exception as e:
-            response = f"Error processing request: {str(e)}"
+        # Initialize response
+        response = None
+        retries = 0
+        
+        while retries < max_retries:
+            try:
+                print(f"Making request to OpenRouter API: {OPENROUTER_URL}")
+                print(f"Using model: {MODEL}")
+                print(f"API Key (first 5 chars): {OPENROUTER_API_KEY[:5]}...")
+                print(f"Request data: {json.dumps(data)}")
+                
+                # Make the API request
+                resp = requests.post(OPENROUTER_URL, headers=headers, json=data, timeout=30)
+                
+                # Print response details for debugging
+                print(f"Response status: {resp.status_code}")
+                print(f"Response body: {resp.text[:300]}")
+                
+                if resp.status_code == 200:
+                    # Parse successful response
+                    response_data = resp.json()
+                    
+                    # Extract content from choices[0].message.content
+                    if "choices" in response_data and len(response_data["choices"]) > 0:
+                        choice = response_data["choices"][0]
+                        if "message" in choice and "content" in choice["message"]:
+                            response = choice["message"]["content"]
+                            print(f"Successfully received response: {response[:100]}...")
+                            break  # Success, exit the retry loop
+                        else:
+                            print("Warning: Unexpected response format - missing message.content")
+                            response = "Error: Unexpected response format from API"
+                            break
+                    else:
+                        print("Warning: No choices in API response")
+                        response = "Error: No response content from API"
+                        break
+                    
+                elif resp.status_code == 400:
+                    # Handle bad request errors
+                    error_data = resp.json()
+                    error_message = error_data.get("error", {}).get("message", "Unknown error")
+                    print(f"Bad request error: {error_message}")
+                    response = f"API Error (400 Bad Request): {error_message}"
+                    break
+                    
+                elif resp.status_code == 404:
+                    # Handle model not found
+                    error_data = resp.json()
+                    error_message = error_data.get("error", {}).get("message", "Model not found or unavailable")
+                    print(f"Model not found error: {error_message}")
+                    response = f"API Error: {error_message}"
+                    break
+                    
+                elif resp.status_code == 429:  # Rate limit exceeded
+                    print("Rate limit exceeded, waiting before retry...")
+                    time.sleep(5)  # Wait 5 seconds before retrying
+                    retries += 1
+                    
+                else:
+                    # Handle other errors
+                    print(f"Error response body: {resp.text}")
+                    error_msg = f"API Error (Status {resp.status_code}): {resp.text}"
+                    response = f"Error processing request: {error_msg}"
+                    break
+                    
+            except requests.exceptions.Timeout:
+                print(f"Request timed out (attempt {retries+1}/{max_retries})")
+                retries += 1
+                time.sleep(2)  # Wait 2 seconds before retrying
+                
+            except Exception as e:
+                print(f"Error in process_chat: {str(e)}")
+                response = f"Error processing request: {str(e)}"
+                break  # Exit on other errors
+        
+        # If all retries failed, provide a fallback response
+        if response is None:
+            response = "I'm sorry, but I couldn't process your request at this time. Please try again later."
     
     # Store the chat in the database
     chat = Chat(message=message, response=response)
@@ -53,6 +133,10 @@ def process_chat(message):
 
 def extract_concepts(message, response):
     """Extract key concepts from the conversation and build the knowledge graph"""
+    
+    # Skip concept extraction for error messages
+    if response.startswith("Error processing request:") or response.startswith("I'm sorry") or response.startswith("API Error"):
+        return
     
     # Combine message and response for concept extraction
     combined_text = message + " " + response
