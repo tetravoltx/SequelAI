@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Sequel AI - Graph Mode</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/globals.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styleguide.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <!-- Sigma.js for graph visualization -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/2.3.0/sigma.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/graphology/0.25.1/graphology.umd.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <body>
+    <div class="graph-mode">
+      <div class="overlap-wrapper">
+        <div class="overlap">
+          <div class="text-wrapper">Sequel AI</div>
+          <div id="back-button" class="sidebar"></div>
+          <div class="graph-mode-on">
+            <div id="graph-toggle" class="toggle"><div class="knob"></div></div>
+            <div class="div">Graph Mode</div>
+          </div>
+          <div class="cluster-mode-on">
+            <div class="overlap-group">
+              <div class="text-wrapper-2">Topic to Cluster</div>
+              <img class="vector" src="{{ url_for('static', filename='img/vector-2.svg') }}" alt="Topic icon" />
+            </div>
+            <div class="text-wrapper-3">Cluster Mode</div>
+            <div class="knob-wrapper"><div class="knob"></div></div>
+          </div>
+          <div class="overlap-2">
+            <div class="edit-mode">
+              <div class="menu-layout-wrapper">
+                <div class="menu-layout">
+                  <div class="text-wrapper-4">Set Label</div>
+                  <div class="text-wrapper-5">Set Size</div>
+                  <div class="text-wrapper-5">Add Comments</div>
+                  <div class="text-wrapper-5">Node Insert</div>
+                </div>
+              </div>
+              <div class="text-wrapper-6">Simulate Nodes</div>
+              <img class="img" src="{{ url_for('static', filename='img/vector.svg') }}" alt="Vector icon" />
+              <div class="text-wrapper-7">Commit Changes</div>
+            </div>
+            <div class="input-layout">
+              <div class="text-wrapper-8">sd</div>
+              <div class="text-wrapper-9">y</div>
+              <div class="text-wrapper-10">+</div>
+              <div class="text-wrapper-10">+</div>
+            </div>
+          </div>
+          <div class="semantic-search">
+            <div class="rectangle"></div>
+            <div class="search-box">
+              <div class="text-wrapper-11">Semantic Search</div>
+              <img class="vector-2" src="{{ url_for('static', filename='img/image.svg') }}" alt="Search icon" />
+            </div>
+          </div>
+          
+          <!-- Add graph container -->
+          <div id="graph-container" style="width: 800px; height: 600px; margin: 0 auto; position: absolute; top: 120px; left: 50%; transform: translateX(-50%);"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      $(document).ready(function() {
+        // Initialize the graph with Sigma.js
+        const container = document.getElementById('graph-container');
+        
+        // Initialize a graph instance
+        const graph = new graphology.Graph();
+        
+        // Fetch graph data from API
+        fetch('/api/graph_data')
+          .then(response => response.json())
+          .then(data => {
+            // Add nodes to the graph
+            data.nodes.forEach(node => {
+              graph.addNode(node.id, {
+                label: node.label,
+                size: node.size * 10, // Scale up size for better visibility
+                color: node.color,
+                x: Math.random(), // Random initial position
+                y: Math.random()
+              });
+            });
+            
+            // Add edges to the graph
+            data.edges.forEach(edge => {
+              graph.addEdge(edge.source, edge.target, {
+                size: edge.weight,
+                color: '#ccc'
+              });
+            });
+            
+            // Initialize sigma
+            const renderer = new Sigma(graph, container, {
+              renderEdgeLabels: true,
+              labelSize: 14,
+              labelColor: {
+                color: '#000'
+              },
+              nodeColor: {
+                color: 'color'
+              }
+            });
+          })
+          .catch(error => {
+            console.error('Error fetching graph data:', error);
+            alert('Failed to load graph data. Please try again later.');
+          });
+        
+        // Toggle graph mode
+        $('#graph-toggle, #back-button').click(function() {
+          // Slide transition to main page
+          $('body').addClass('slide-out-right');
+          setTimeout(function() {
+            window.location.href = "{{ url_for('index') }}";
+          }, 300);
+        });
+      });
+    </script>
+
+    <style>
+      /* Add slide transition effect */
+      body {
+        transition: transform 0.3s ease-out;
+      }
+      body.slide-out-right {
+        transform: translateX(100%);
+      }
+      
+      #graph-container {
+        background-color: rgba(255, 255, 255, 0.5);
+        border-radius: 15px;
+      }
+      
+      #back-button {
+        cursor: pointer;
+      }
+    </style>
+  </body>
+</html> 

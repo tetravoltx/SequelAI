@@ -1,0 +1,6 @@
+flask==2.0.1
+flask-sqlalchemy==2.5.1
+requests==2.26.0
+scikit-learn==1.0.2
+numpy==1.21.4
+python-dotenv==0.19.1 

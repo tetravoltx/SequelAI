@@ -1,0 +1,30 @@
+:root {
+  --black: rgba(0, 0, 0, 1);
+  --black-2: rgba(46, 46, 46, 1);
+  --black-3: rgba(38, 38, 38, 1);
+  --black-4: rgba(62, 62, 62, 1);
+  --fills-tertiary: rgba(118, 118, 128, 0.12);
+  --gray: rgba(217, 217, 217, 1);
+  --lightgray: rgba(131, 131, 131, 1);
+  --lightgray-2: rgba(120, 118, 118, 1);
+  --lightgray-3: rgba(120, 120, 128, 0.16);
+  --white: rgba(255, 255, 255, 1);
+  --white-2: rgba(255, 255, 255, 0.4);
+
+  --font-size-l: 32px;
+  --font-size-m: 24px;
+  --font-size-s: 12px;
+  --font-size-xl: 40px;
+  --font-size-xxl: 64px;
+
+  --font-family-consolas-regular: "Consolas-Regular", Helvetica;
+  --font-family-darker_grotesque-regular: "Darker Grotesque-Regular", Helvetica;
+}
+
+.consolas-regular-black-24px {
+  color: var(--black);
+  font-family: var(--font-family-consolas-regular);
+  font-size: var(--font-size-m);
+  font-style: normal;
+  font-weight: 400;
+} 

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Sequel AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/globals.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styleguide.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <body>
+    <div class="sequel-front-page">
+      <div class="overlap-wrapper">
+        <div class="overlap">
+          <div class="overlap-group">
+            <div class="text-wrapper">Sequel AI</div>
+            <p class="div">How can I help you today?</p>
+          </div>
+          <div class="chat-box">
+            <div class="overlap-2">
+              <div class="rectangle"></div>
+              <button class="search-button">
+                <div class="overlap-group-2">
+                  <div class="rectangle-2"></div>
+                  <div class="text-wrapper-2">Search</div>
+                  <img class="vector" src="{{ url_for('static', filename='img/image.svg') }}" alt="Search icon" />
+                </div>
+              </button>
+              <div id="chat-input" contenteditable="true" class="p">WHAT DO YOU WANT TO KNOW?</div>
+              <div class="reason-button">
+                <div class="overlap-group-2">
+                  <div class="rectangle-3"></div>
+                  <div class="text-wrapper-3">Reason</div>
+                  <img class="vector-2" src="{{ url_for('static', filename='img/vector.svg') }}" alt="Reason icon" />
+                </div>
+              </div>
+              <img id="send-button" class="send" src="{{ url_for('static', filename='img/send.svg') }}" alt="Send" />
+              <div class="upload-button">
+                <div class="overlap-3">
+                  <div class="ellipse"><div class="ellipse-2"></div></div>
+                  <img class="upload-file" src="{{ url_for('static', filename='img/upload-file.svg') }}" alt="Upload file" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="login-button">
+            <div class="overlap-group-2">
+              <div class="rectangle-4"></div>
+              <div class="text-wrapper-4">Login/SignUp</div>
+            </div>
+          </div>
+          <div class="graph-mode-on">
+            <div id="graph-toggle" class="toggle"><div class="knob"></div></div>
+            <div class="text-wrapper-5">Graph Mode</div>
+          </div>
+          <div class="overlap-4">
+            <div class="sidebar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      $(document).ready(function() {
+        // Clear placeholder text when clicked
+        $('#chat-input').focus(function() {
+          if ($(this).text() === 'WHAT DO YOU WANT TO KNOW?') {
+            $(this).text('');
+            $(this).css('color', '#000');
+          }
+        });
+
+        // Restore placeholder text if empty on blur
+        $('#chat-input').blur(function() {
+          if ($(this).text().trim() === '') {
+            $(this).text('WHAT DO YOU WANT TO KNOW?');
+            $(this).css('color', '#262626');
+          }
+        });
+
+        // Handle send button click
+        $('#send-button').click(function() {
+          sendMessage();
+        });
+
+        // Handle Enter key press in chat input
+        $('#chat-input').keypress(function(e) {
+          if (e.which === 13) {
+            e.preventDefault();
+            sendMessage();
+          }
+        });
+
+        // Toggle graph mode
+        $('#graph-toggle').click(function() {
+          // Slide transition to graph page
+          $('body').addClass('slide-out-left');
+          setTimeout(function() {
+            window.location.href = "{{ url_for('graph') }}";
+          }, 300);
+        });
+
+        function sendMessage() {
+          const message = $('#chat-input').text().trim();
+          if (message !== '' && message !== 'WHAT DO YOU WANT TO KNOW?') {
+            // Send chat message to server
+            $.ajax({
+              url: '/api/chat',
+              type: 'POST',
+              contentType: 'application/json',
+              data: JSON.stringify({ message: message }),
+              success: function(response) {
+                alert('Response: ' + response.response);
+                // Clear input after sending
+                $('#chat-input').text('WHAT DO YOU WANT TO KNOW?');
+                $('#chat-input').css('color', '#262626');
+              },
+              error: function(err) {
+                console.error('Error sending message:', err);
+                alert('Error: ' + err.responseJSON?.error || 'Failed to send message');
+              }
+            });
+          }
+        }
+      });
+    </script>
+
+    <style>
+      /* Add slide transition effect */
+      body {
+        transition: transform 0.3s ease-out;
+      }
+      body.slide-out-left {
+        transform: translateX(-100%);
+      }
+    </style>
+  </body>
+</html> 
