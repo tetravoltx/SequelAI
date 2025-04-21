@@ -12,55 +12,50 @@
     <div class="sequel-front-page">
       <div class="overlap-wrapper">
         <div class="overlap">
-          <div class="overlap-group">
-            <div class="text-wrapper">Sequel AI</div>
-            <p class="div">How can I help you today?</p>
+          <!-- Header -->
+          <div class="header">
+            <div class="logo-container">
+              <div class="text-wrapper">Sequel AI</div>
+            </div>
+            <div class="header-controls">
+              <div class="graph-mode-on">
+                <div id="graph-toggle" class="toggle"><div class="knob"></div></div>
+                <div class="text-wrapper-5">Graph Mode</div>
+              </div>
+              <div class="login-button">
+                <div class="overlap-group-2">
+                  <div class="rectangle-4"></div>
+                  <div class="text-wrapper-4">Login/SignUp</div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="chat-box">
-            <div class="overlap-2">
-              <div class="rectangle"></div>
-              <button class="search-button">
-                <div class="overlap-group-2">
-                  <div class="rectangle-2"></div>
-                  <div class="text-wrapper-2">Search</div>
-                  <img class="vector" src="{{ url_for('static', filename='img/image.svg') }}" alt="Search icon" />
-                </div>
-              </button>
-              <div id="chat-input" contenteditable="true" class="p">WHAT DO YOU WANT TO KNOW?</div>
-              <div class="reason-button">
-                <div class="overlap-group-2">
-                  <div class="rectangle-3"></div>
-                  <div class="text-wrapper-3">Reason</div>
-                  <img class="vector-2" src="{{ url_for('static', filename='img/vector.svg') }}" alt="Reason icon" />
-                </div>
+          
+          <!-- Chat history container -->
+          <div class="chat-history-container" id="chat-history-container">
+            <!-- Initial greeting message -->
+            <div class="message assistant-message">
+              <div class="message-content">
+                <p>How can I help you today?</p>
               </div>
-              <img id="send-button" class="send" src="{{ url_for('static', filename='img/send.svg') }}" alt="Send" />
-              <div class="upload-button">
-                <div class="overlap-3">
-                  <div class="ellipse"><div class="ellipse-2"></div></div>
-                  <img class="upload-file" src="{{ url_for('static', filename='img/upload-file.svg') }}" alt="Upload file" />
-                </div>
+            </div>
+            <!-- Messages will be added here dynamically -->
+          </div>
+          
+          <!-- Fixed chat input box at the bottom -->
+          <div class="chat-input-container">
+            <div class="chat-input-box">
+              <div id="chat-input" contenteditable="true" class="chat-input-field" placeholder="Message Sequel AI...">WHAT DO YOU WANT TO KNOW?</div>
+              <div class="chat-controls">
+                <img id="send-button" class="send" src="{{ url_for('static', filename='img/send.svg') }}" alt="Send" />
               </div>
-              <div id="response-container" class="response-container"></div>
+              <!-- Loading indicator inside the input box -->
               <div id="loading-indicator" class="loading-indicator">
                 <div class="dot"></div>
                 <div class="dot"></div>
                 <div class="dot"></div>
               </div>
             </div>
-          </div>
-          <div class="login-button">
-            <div class="overlap-group-2">
-              <div class="rectangle-4"></div>
-              <div class="text-wrapper-4">Login/SignUp</div>
-            </div>
-          </div>
-          <div class="graph-mode-on">
-            <div id="graph-toggle" class="toggle"><div class="knob"></div></div>
-            <div class="text-wrapper-5">Graph Mode</div>
-          </div>
-          <div class="overlap-4">
-            <div class="sidebar"></div>
           </div>
         </div>
       </div>
@@ -69,7 +64,9 @@
     <script>
       $(document).ready(function() {
         $('#loading-indicator').hide();
-        $('#response-container').hide();
+        
+        // Focus input field on page load
+        $('#chat-input').focus();
 
         $('#chat-input').focus(function() {
           if ($(this).text() === 'WHAT DO YOU WANT TO KNOW?') {
@@ -81,7 +78,7 @@
         $('#chat-input').blur(function() {
           if ($(this).text().trim() === '') {
             $(this).text('WHAT DO YOU WANT TO KNOW?');
-            $(this).css('color', '#262626');
+            $(this).css('color', '#666');
           }
         });
 
@@ -90,7 +87,7 @@
         });
 
         $('#chat-input').keypress(function(e) {
-          if (e.which === 13) {
+          if (e.which === 13 && !e.shiftKey) {
             e.preventDefault();
             sendMessage();
           }
@@ -106,10 +103,18 @@
         function sendMessage() {
           const message = $('#chat-input').text().trim();
           if (message !== '' && message !== 'WHAT DO YOU WANT TO KNOW?') {
-            $('#loading-indicator').show();
-            $('#response-container').hide();
+            // Add user message to chat history
+            addMessageToChat('user', message);
             
+            // Clear input and show loading indicator
+            $('#chat-input').text('').focus();
+            $('#loading-indicator').show();
+            
+            // Disable send button while processing
             $('#send-button').css('opacity', '0.5').prop('disabled', true);
+            
+            // Scroll to bottom of chat
+            scrollToBottom();
             
             $.ajax({
               url: '/api/chat',
@@ -119,26 +124,52 @@
               success: function(response) {
                 $('#loading-indicator').hide();
                 
-                $('#response-container').html(response.response.replace(/\n/g, '<br>')).show();
+                // Add assistant response to chat history
+                addMessageToChat('assistant', response.response);
                 
-                $('#chat-input').text('WHAT DO YOU WANT TO KNOW?');
-                $('#chat-input').css('color', '#262626');
-                
+                // Re-enable send button
                 $('#send-button').css('opacity', '1').prop('disabled', false);
+                
+                // Scroll to bottom of chat
+                scrollToBottom();
               },
               error: function(err) {
                 $('#loading-indicator').hide();
                 
-                $('#response-container').html(
-                  `<div class="error">Error: ${err.responseJSON?.error || 'Failed to send message. Please try again.'}</div>`
-                ).show();
+                // Add error message to chat history
+                const errorMsg = err.responseJSON?.error || 'Failed to send message. Please try again.';
+                addMessageToChat('error', errorMsg);
                 
                 console.error('Error sending message:', err);
                 
+                // Re-enable send button
                 $('#send-button').css('opacity', '1').prop('disabled', false);
+                
+                // Scroll to bottom of chat
+                scrollToBottom();
               }
             });
           }
+        }
+        
+        function addMessageToChat(role, content) {
+          const messageClass = role === 'user' ? 'user-message' : (role === 'error' ? 'error-message' : 'assistant-message');
+          const formattedContent = content.replace(/\n/g, '<br>');
+          
+          const messageHtml = `
+            <div class="message ${messageClass}">
+              <div class="message-content">
+                <p>${formattedContent}</p>
+              </div>
+            </div>
+          `;
+          
+          $('#chat-history-container').append(messageHtml);
+        }
+        
+        function scrollToBottom() {
+          const container = document.getElementById('chat-history-container');
+          container.scrollTop = container.scrollHeight;
         }
       });
     </script>
@@ -146,45 +177,180 @@
     <style>
       body {
         transition: transform 0.3s ease-out;
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        overflow: hidden;
       }
+      
       body.slide-out-left {
         transform: translateX(-100%);
       }
       
-      .response-container {
-        position: absolute;
-        width: 90%;
-        max-height: 100px;
+      .sequel-front-page {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .overlap-wrapper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .overlap {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background-image: linear-gradient(to bottom right, #7C9FDF, #B290D6, #7ED1B8, #F0E98C);
+        background-size: 100% 100%;
+      }
+      
+      /* Header styles */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        height: 60px;
+      }
+      
+      .logo-container {
+        display: flex;
+        align-items: center;
+      }
+      
+      .header-controls {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      
+      /* Chat history container */
+      .chat-history-container {
+        flex: 1;
         overflow-y: auto;
-        top: 20px;
-        left: 40px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+        width: 100%;
+      }
+      
+      .message {
+        display: flex;
+        max-width: 100%;
+      }
+      
+      .user-message {
+        justify-content: flex-end;
+      }
+      
+      .assistant-message, .error-message {
+        justify-content: flex-start;
+      }
+      
+      .message-content {
+        padding: 15px;
+        border-radius: 15px;
+        max-width: 80%;
+      }
+      
+      .user-message .message-content {
+        background-color: rgba(124, 159, 223, 0.8);
+        color: #fff;
+      }
+      
+      .assistant-message .message-content {
+        background-color: rgba(255, 255, 255, 0.8);
+        color: #333;
+      }
+      
+      .error-message .message-content {
+        background-color: rgba(231, 76, 60, 0.1);
+        color: #e74c3c;
+        border: 1px solid rgba(231, 76, 60, 0.3);
+      }
+      
+      .message-content p {
+        margin: 0;
         font-family: "Inter", "Consolas-Regular", Helvetica, sans-serif;
         font-size: 16px;
         line-height: 1.5;
-        color: #333;
-        background-color: rgba(255, 255, 255, 0.7);
-        border-radius: 10px;
-        padding: 10px;
-        display: none;
       }
       
-      .error {
-        color: #e74c3c;
-        font-weight: 500;
+      /* Chat input container */
+      .chat-input-container {
+        margin-top: auto;
+        padding: 20px;
+        max-width: 800px;
+        width: 100%;
+        margin: 0 auto 20px auto;
       }
       
+      .chat-input-box {
+        position: relative;
+        border-radius: 15px;
+        background-color: rgba(255, 255, 255, 0.9);
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .chat-input-field {
+        min-height: 24px;
+        max-height: 150px;
+        overflow-y: auto;
+        outline: none;
+        border: none;
+        padding: 10px 15px;
+        font-family: "Inter", "Consolas-Regular", Helvetica, sans-serif;
+        font-size: 16px;
+        color: #666;
+        width: calc(100% - 50px);
+      }
+      
+      .chat-input-field:focus {
+        color: #000;
+      }
+      
+      .chat-controls {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-top: 10px;
+      }
+      
+      /* Send button */
+      .send {
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+      }
+      
+      .send:hover {
+        transform: scale(1.1);
+      }
+      
+      /* Loading indicator */
       .loading-indicator {
         position: absolute;
         left: 50%;
-        top: 30px;
-        transform: translateX(-50%);
+        top: 50%;
+        transform: translate(-50%, -50%);
         display: flex;
         gap: 8px;
       }
       
       .dot {
-        width: 12px;
-        height: 12px;
+        width: 10px;
+        height: 10px;
         background-color: #7C9FDF;
         border-radius: 50%;
         animation: pulse 1.5s infinite ease-in-out;
@@ -208,6 +374,21 @@
         50% {
           transform: scale(1.2);
           opacity: 1;
+        }
+      }
+      
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        .chat-history-container {
+          padding: 10px;
+        }
+        
+        .chat-input-container {
+          padding: 10px;
+        }
+        
+        .message-content {
+          max-width: 90%;
         }
       }
     </style>
