@@ -35,13 +35,12 @@ def chat():
     if not message:
         return jsonify({'error': 'No message provided'}), 400
     
-    # Process the chat message
-    response = process_chat(message)
+    # Process the chat message - now returns both response and concepts
+    result = process_chat(message)
     
-    # Extract concepts and store in the graph
-    extract_concepts(message, response)
+    # No need to call extract_concepts separately - it's done inside process_chat
     
-    return jsonify({'response': response})
+    return jsonify(result)
 
 @app.route('/api/graph_data')
 def get_graph():

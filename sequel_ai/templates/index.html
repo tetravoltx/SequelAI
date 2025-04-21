@@ -132,6 +132,11 @@
                 
                 // Scroll to bottom of chat
                 scrollToBottom();
+                
+                // If graph mode is active or concepts were extracted, show notification
+                if (response.concepts && response.concepts.length > 0) {
+                  showConceptsNotification(response.concepts);
+                }
               },
               error: function(err) {
                 $('#loading-indicator').hide();
@@ -165,6 +170,44 @@
           `;
           
           $('#chat-history-container').append(messageHtml);
+        }
+        
+        function showConceptsNotification(concepts) {
+          // Create a notification bubble
+          const conceptsList = concepts.join(', ');
+          const notificationHtml = `
+            <div class="concepts-notification">
+              <p>New concepts added to graph: <strong>${conceptsList}</strong></p>
+              <div class="notification-actions">
+                <button id="view-graph-btn">View Graph</button>
+                <button class="dismiss-btn">Dismiss</button>
+              </div>
+            </div>
+          `;
+          
+          // Remove any existing notification
+          $('.concepts-notification').remove();
+          
+          // Append the notification
+          $('body').append(notificationHtml);
+          
+          // Add event listeners
+          $('#view-graph-btn').click(function() {
+            window.location.href = "{{ url_for('graph') }}";
+          });
+          
+          $('.dismiss-btn').click(function() {
+            $('.concepts-notification').fadeOut(300, function() {
+              $(this).remove();
+            });
+          });
+          
+          // Auto-dismiss after 6 seconds
+          setTimeout(function() {
+            $('.concepts-notification').fadeOut(300, function() {
+              $(this).remove();
+            });
+          }, 6000);
         }
         
         function scrollToBottom() {
@@ -389,6 +432,64 @@
         
         .message-content {
           max-width: 90%;
+        }
+      }
+      
+      /* Concepts notification */
+      .concepts-notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: rgba(255, 255, 255, 0.95);
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 15px;
+        max-width: 300px;
+        z-index: 1000;
+        animation: slide-in-right 0.3s ease-out;
+      }
+      
+      .concepts-notification p {
+        margin: 0 0 10px 0;
+        font-family: "Inter", Helvetica, sans-serif;
+        font-size: 14px;
+        line-height: 1.4;
+        color: #333;
+      }
+      
+      .notification-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+      
+      .notification-actions button {
+        background: none;
+        border: none;
+        padding: 5px 10px;
+        font-family: "Inter", Helvetica, sans-serif;
+        font-size: 13px;
+        cursor: pointer;
+        border-radius: 5px;
+      }
+      
+      #view-graph-btn {
+        background-color: #7C9FDF;
+        color: white;
+      }
+      
+      .dismiss-btn {
+        color: #666;
+      }
+      
+      @keyframes slide-in-right {
+        0% {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        100% {
+          transform: translateX(0);
+          opacity: 1;
         }
       }
     </style>

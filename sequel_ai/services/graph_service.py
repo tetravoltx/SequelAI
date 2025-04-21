@@ -8,19 +8,48 @@ def get_graph_data():
     nodes = Node.query.all()
     edges = Edge.query.all()
     
-    # Assign colors based on node clustering or other properties
-    # For demonstration, we'll use a set of predefined colors
-    colors = ["#7C9FDF", "#B290D6", "#7ED1B8", "#F0E98C", "#D67E7E"]
+    # Define sample/system nodes that should be filtered out for the UI
+    # These are the nodes created by create_sample_graph function
+    sample_node_labels = [
+        "Runtime Polymorphism",
+        "Compile time polymorphism",
+        "Method Overloading",
+        "Overriding",
+        "Memory allocation",
+        "Accessing through heap stack"
+    ]
+    
+    # Assign colors based on node type
+    colors = {
+        "user_query": "#7C9FDF",      # Blue
+        "response": "#B290D6",        # Purple
+        "concept": "#7ED1B8",         # Green
+        "location": "#F0E98C",        # Yellow
+        "error": "#D67E7E"            # Red
+    }
     
     # Format data for Sigma.js
     nodes_data = []
     for i, node in enumerate(nodes):
         node_data = node.to_dict()
         
-        # Assign a color if not already set
-        if not node.color or node.color == "#B290D6":
-            node_data["color"] = colors[i % len(colors)]
-            
+        # Determine node type/category for coloring
+        if node.label in sample_node_labels:
+            node_type = "system"
+        elif "Error" in node.label or "error" in node.label:
+            node_type = "error"
+        elif node.label in ["India", "New Delhi", "Not Found"]:
+            node_type = "location"
+        else:
+            # Alternate between user query and response for other nodes
+            node_type = "concept"
+        
+        # Assign a color based on node type
+        node_data["color"] = colors.get(node_type, colors["concept"])
+        
+        # Add additional metadata for UI filtering
+        node_data["is_sample"] = node.label in sample_node_labels
+        
         nodes_data.append(node_data)
     
     edges_data = [edge.to_dict() for edge in edges]

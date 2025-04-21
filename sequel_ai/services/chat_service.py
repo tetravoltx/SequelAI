@@ -129,14 +129,21 @@ def process_chat(message, max_retries=3):
     db.session.add(chat)
     db.session.commit()
     
-    return response
+    # Extract concepts from the conversation
+    extracted_concepts = extract_concepts(message, response)
+    
+    # Return both the response and extracted concepts
+    return {
+        "response": response,
+        "concepts": extracted_concepts
+    }
 
 def extract_concepts(message, response):
     """Extract key concepts from the conversation and build the knowledge graph"""
     
     # Skip concept extraction for error messages
     if response.startswith("Error processing request:") or response.startswith("I'm sorry") or response.startswith("API Error"):
-        return
+        return []
     
     # Combine message and response for concept extraction
     combined_text = message + " " + response
@@ -161,7 +168,7 @@ def extract_concepts(message, response):
     
     # Skip if no concepts found
     if not top_concepts:
-        return
+        return []
     
     # Add nodes for each concept
     nodes = []
@@ -206,4 +213,7 @@ def extract_concepts(message, response):
                         db.session.add(edge)
     
     # Commit all changes
-    db.session.commit() 
+    db.session.commit()
+    
+    # Return the list of concept labels that were extracted
+    return [node.label for node in nodes] 
